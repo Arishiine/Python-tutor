@@ -35,11 +35,11 @@ export default async function handler(req, res) {
         authorization: `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: process.env.LLM_MODEL || "llama-3.3-70b-versatile",
-        max_tokens: 2000,
-        temperature: 0.2,
+        model: process.env.LLM_MODEL || "openai/gpt-oss-120b",
+        max_completion_tokens: 4000,
+        reasoning_effort: "low",
         messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
-      }),
+      }), 
     });
     const data = await upstream.json();
     if (!upstream.ok) {
