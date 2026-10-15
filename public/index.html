@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Python Tutor</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐍</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=JetBrains+Mono:wght@400;500&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#f2f5fa;--grid:#dfe6f2;--panel:#fff;--ink:#16213e;--muted:#5b6785;--line:#cfd7e6;--accent:#f2c230;--accent-ink:#2a2000;--teal:#1c7c7d;--err:#b4232c;--code:#eef2f9}
+@media (prefers-color-scheme:dark){:root{--paper:#0f1629;--grid:#18223d;--panel:#16203a;--ink:#e7ecf8;--muted:#9aa7c7;--line:#2a3556;--teal:#4fc3c4;--err:#ff8a90;--code:#0f1730}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:17px/1.6 "Source Sans 3",system-ui,sans-serif;color:var(--ink);background-color:var(--paper);
+background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:28px 28px;min-height:100vh}
+header{max-width:1200px;margin:0 auto;padding:36px 24px 8px}
+h1{font:700 clamp(32px,5vw,52px)/1.05 "Bricolage Grotesque",sans-serif;margin:0 0 8px;letter-spacing:-.02em}
+header p{margin:0;color:var(--muted);max-width:60ch}
+main{max-width:1200px;margin:0 auto;padding:20px 24px 48px;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:20px;align-items:start}
+@media (max-width:860px){main{grid-template-columns:1fr}}
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+h2{font:500 15px "Bricolage Grotesque",sans-serif;color:var(--muted);margin:0 0 10px}
+textarea{width:100%;min-height:380px;resize:vertical;font:400 14.5px/1.6 "JetBrains Mono",monospace;color:var(--ink);background:var(--code);border:1px solid var(--line);border-radius:6px;padding:14px;tab-size:4}
+textarea:focus-visible,button:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+.row{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
+button{font:600 16px "Source Sans 3",sans-serif;border-radius:6px;padding:10px 18px;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--ink)}
+button.run{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:disabled{opacity:.6;cursor:wait}
+.hint{color:var(--muted);font-size:14px}
+#out{min-height:200px;overflow-wrap:anywhere}
+#out h3{font:700 20px "Bricolage Grotesque",sans-serif;margin:22px 0 6px}
+#out h3:first-child{margin-top:0}
+#out table{border-collapse:collapse;width:100%;display:block;overflow-x:auto;font-size:15px}
+#out th,#out td{border:1px solid var(--line);padding:6px 10px;text-align:left}
+#out th{background:var(--code)}
+#out pre{background:var(--code);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto}
+#out code{font:400 14px "JetBrains Mono",monospace}
+.err{color:var(--err)}
+.empty{color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Python Tutor</h1>
+  <p>Paste Python code. Get a line-by-line trace, the variables in memory, and the output it would print.</p>
+</header>
+<main>
+  <section aria-labelledby="c">
+    <h2 id="c">Your code</h2>
+    <textarea id="code" spellcheck="false" aria-label="Python code">fruits = ["apple", "banana", "cherry"]
+total = 0
+
+for fruit in fruits:
+    total += len(fruit)
+    print(fruit, total)
+
+print("Total letters:", total)</textarea>
+    <div class="row">
+      <button class="run" id="run">Run and explain</button>
+      <button id="reset">Start over</button>
+      <span class="hint">Ctrl/⌘ + Enter to run</span>
+    </div>
+  </section>
+  <section aria-labelledby="t" aria-live="polite">
+    <h2 id="t">Tutor</h2>
+    <div id="out"><p class="empty">Your explanation appears here. Answer the challenge by running your improved code.</p></div>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script>
+const ed = document.getElementById("code"), out = document.getElementById("out");
+const runBtn = document.getElementById("run"), resetBtn = document.getElementById("reset");
+let history = [];
+
+async function run() {
+  const code = ed.value.trim();
+  if (!code) return;
+  runBtn.disabled = true;
+  out.innerHTML = '<p class="empty">Tracing your code…</p>';
+  history.push({ role: "user", content: code });
+  try {
+    const r = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: history.slice(-7) })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Request failed.");
+    history.push({ role: "assistant", content: d.text });
+    out.innerHTML = DOMPurify.sanitize(marked.parse(d.text));
+  } catch (e) {
+    history.pop();
+    out.innerHTML = "";
+    const p = document.createElement("p");
+    p.className = "err";
+    p.textContent = e.message + " Check your connection and run again.";
+    out.appendChild(p);
+  }
+  runBtn.disabled = false;
+}
+
+runBtn.onclick = run;
+resetBtn.onclick = () => { history = []; out.innerHTML = '<p class="empty">Session cleared. Paste new code to start.</p>'; };
+ed.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); run(); }
+  if (e.key === "Tab" && !e.shiftKey) {
+    e.preventDefault();
+    const s = ed.selectionStart;
+    ed.setRangeText("    ", s, ed.selectionEnd, "end");
+  }
+});
+</script>
+</body>
+</html>

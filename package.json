@@ -1,0 +1,8 @@
+{
+  "name": "python-tutor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI Python tutor that simulates code execution and explains it line by line",
+  "engines": { "node": ">=18" }
+}
