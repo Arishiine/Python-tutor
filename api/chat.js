@@ -7,8 +7,8 @@ export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Use POST." });
   }
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return res.status(500).json({ error: "Server is missing ANTHROPIC_API_KEY." });
+  if (!process.env.GROQ_API_KEY) {
+    return res.status(500).json({ error: "Server is missing GROQ_API_KEY." });
   }
 
   const messages = req.body?.messages;
@@ -28,25 +28,24 @@ export default async function handler(req, res) {
   }
 
   try {
-    const upstream = await fetch("https://api.anthropic.com/v1/messages", {
+    const upstream = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
+        authorization: `Bearer ${process.env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
+        model: process.env.LLM_MODEL || "llama-3.3-70b-versatile",
         max_tokens: 2000,
-        system: SYSTEM_PROMPT,
-        messages,
+        temperature: 0.2,
+        messages: [{ role: "system", content: SYSTEM_PROMPT }, ...messages],
       }),
     });
     const data = await upstream.json();
     if (!upstream.ok) {
       return res.status(502).json({ error: data?.error?.message || "Upstream error." });
     }
-    const text = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("\n");
+    const text = data.choices?.[0]?.message?.content || "";
     return res.status(200).json({ text });
   } catch (err) {
     return res.status(500).json({ error: "Could not reach the model. Try again." });
