@@ -12,16 +12,6 @@ A web app where learners paste Python code and get an analogy, a line-by-line tr
 npm i -g vercel
 cp .env.example .env      # add your ANTHROPIC_API_KEY
 vercel dev
-```
-
-## Push to GitHub
-```bash
-git init && git add . && git commit -m "Initial commit: Python Tutor"
-git branch -M main
-git remote add origin https://github.com/<your-username>/python-tutor.git
-git push -u origin main
-```
-(Create the empty `python-tutor` repo on github.com first, or run `gh repo create python-tutor --public --source=. --push`.)
 
 ## Deploy on Vercel
 1. vercel.com → Add New → Project → import the GitHub repo.
